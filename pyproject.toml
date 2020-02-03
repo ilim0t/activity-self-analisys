@@ -6,6 +6,9 @@ authors = ["ilim <ilim0t14@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
+pathlib = "^1.0.1"
+argparse = "^1.4.0"
+tqdm = "^4.42.1"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"
