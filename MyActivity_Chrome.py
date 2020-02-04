@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import argparse
 import json
-from typing import List
-from tqdm import tqdm
-from time import sleep
+import re
 from datetime import datetime
+from pathlib import Path
+from time import sleep
+from typing import List
+
+from tqdm import tqdm
 
 
 def main() -> None:
@@ -27,10 +29,11 @@ def main() -> None:
     #     "titleUrl": "https://www.google....-LHe_SR3Q",
     # }
     infos = []
+    google_search_url = "https://www.google.com/url?q="
 
     for page in tqdm(history):
         if "header" not in page:
-            assert page["titleUrl"][:29] == "https://www.google.com/url?q="
+            assert page["titleUrl"].startswith(google_search_url)
             continue
 
         if "titleUrl" not in page:
@@ -40,27 +43,16 @@ def main() -> None:
         assert page["title"].rsplit(" ", 1)[-1] == "にアクセスしました"
 
         if page["header"] != page["titleUrl"][8:].split("/", 1)[0]:
-            assert page["titleUrl"][:29] == "https://www.google.com/url?q="
+            assert page["titleUrl"].startswith(google_search_url)
+            page["titleUrl"] = page["titleUrl"][len(google_search_url):]
 
             if page["header"] != "Chrome":
-                assert page["header"] in [
-                    page["titleUrl"][29:]
-                    .split("://", 1)[1]
-                    .split("/", 1)[0]
-                    .split(":", 1)[0],
-                    page["titleUrl"][29:]
-                    .split("://", 1)[1]
-                    .split("/", 1)[0]
-                    .split(":", 1)[0]
-                    .split(".", 1)[-1],
-                ]
-            else:
-                pass
-                # page["titleUrl"][29:]
-                #     .split("://", 1)[1]
-                #     .split("/", 1)[0]
-                #     .split(":", 1)[0]
-            page["titleUrl"] = page["titleUrl"][29:]
+                assert re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)
+                assert page["header"] == re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1] or
+                re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1].endswith(page["header"])
+                # {'www3.', 'www.', 'www2.', 'www33.', 'web.'}
+        else:
+            assert page["header"] != "Chrome"
 
         assert page["products"] == ["Chrome"]
         if page["titleUrl"].split(":", 1)[0] in ["http", "https"]:
@@ -69,12 +61,7 @@ def main() -> None:
                     "title": page["title"].rsplit(" ", 1)[0],
                     "url": page["titleUrl"],
                     "time": page["time"],
-                    "domain": page["header"]
-                    if page["header"] != "Chrome"
-                    else page["titleUrl"]
-                    .split("://", 1)[1]
-                    .split("/", 1)[0]
-                    .split(":", 1)[0],
+                    "domain": page["header"] if page["header"] != "Chrome" else re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1],
                 }
             )
         else:

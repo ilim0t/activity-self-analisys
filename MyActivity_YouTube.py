@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import argparse
 import json
+from pathlib import Path
 from typing import List
+
 from tqdm import tqdm
-from time import sleep
-from datetime import datetime
 
 
 def main() -> None:

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import argparse
 import json
-from typing import List
-from tqdm import tqdm
-from time import sleep
+import re
 from datetime import datetime
+from pathlib import Path
+from typing import List
+
+from tqdm import tqdm
 
 
 def main() -> None:
@@ -43,16 +44,14 @@ def main() -> None:
                 "TYPED",
                 "KEYWORD",
             ]
+            assert re.match(r"[\w-]+://([^:/]+)[:/$]", page["url"])
             infos.append(
                 {
                     "client": page["client_id"],
                     "title": page["title"],
                     "url": page["url"],
                     "time": str(datetime.fromtimestamp(page["time_usec"] / 1000000)),
-                    "domain": page["url"]
-                    .split("://", 1)[1]
-                    .split("/", 1)[0]
-                    .split(":", 1)[0],
+                    "domain": re.match(r"[\w-]+://([^:/]+)[:/$]", page["url"])[1],
                 }
             )
         else:
