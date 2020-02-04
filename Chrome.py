@@ -4,23 +4,17 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from tqdm import tqdm
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--takeout-root", type=str, default="Takeout")
-    args = parser.parse_args()
-    print(json.dumps(args.__dict__))  # , indent=2
+def load_data(file_path: Path) -> List[Dict[str, Any]]:
+    with open(file_path) as f:
+        raw_data = json.load(f)
+        assert len(raw_data) == 1
 
-    history_file = Path(args.takeout_root) / "Chrome" / "BrowserHistory.json"
-    with open(history_file) as f:
-        history = json.load(f)
-        assert len(history) == 1
-
-    history: List[dict] = history["Browser History"]
+    raw_data: List[dict] = raw_data["Browser History"]
     # 1年間
     # {
     #     "client_id": "M7HN9wdfkhemOtXt4MoTOg==",
@@ -30,9 +24,9 @@ def main() -> None:
     #     "title": "Google データ エクスポート",
     #     "url": "https://takeout.google.com/",
     # }
-    infos = []
+    history = []
 
-    for page in tqdm(history):
+    for page in tqdm(raw_data):
         if page["url"].split(":", 1)[0] in ["http", "https"]:
             assert page["page_transition"] in [
                 "LINK",
@@ -45,7 +39,7 @@ def main() -> None:
                 "KEYWORD",
             ]
             assert re.match(r"[\w-]+://([^:/]+)[:/$]", page["url"])
-            infos.append(
+            history.append(
                 {
                     "client": page["client_id"],
                     "title": page["title"],
@@ -71,8 +65,19 @@ def main() -> None:
                 "file",
             ]
 
-    print(f"infos: {len(infos)}")
-    print(f"history: {len(history)}")
+    print(f"{len(history)}[{len(history) / len(raw_data):.1%}]のデータが読み込まれました")
+    return history
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--takeout-root", type=str, default="Takeout")
+    args = parser.parse_args()
+    print(json.dumps(args.__dict__))  # , indent=2
+
+    history_file = Path(args.takeout_root) / "Chrome" / "BrowserHistory.json"
+
+    history = load_data(history_file)
 
 
 if __name__ == "__main__":

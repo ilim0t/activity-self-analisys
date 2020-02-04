@@ -2,23 +2,15 @@
 import argparse
 import json
 import re
-from datetime import datetime
 from pathlib import Path
-from time import sleep
-from typing import List
+from typing import Any, Dict, List
 
 from tqdm import tqdm
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--takeout-root", type=str, default="Takeout")
-    args = parser.parse_args()
-    print(json.dumps(args.__dict__))  # , indent=2
-
-    history_file = Path(args.takeout_root) / "マイ アクティビティ" / "Chrome" / "マイアクティビティ.json"
-    with open(history_file) as f:
-        history: List[dict] = json.load(f)
+def load_data(file_path: Path) -> List[Dict[str, Any]]:
+    with open(file_path) as f:
+        raw_data: List[dict] = json.load(f)
 
     # 1年間
     # {
@@ -28,10 +20,10 @@ def main() -> None:
     #     "title": "Ubuntuのディスク容量を見る - ...にアクセスしました",
     #     "titleUrl": "https://www.google....-LHe_SR3Q",
     # }
-    infos = []
+    history = []
     google_search_url = "https://www.google.com/url?q="
 
-    for page in tqdm(history):
+    for page in tqdm(raw_data):
         if "header" not in page:
             assert page["titleUrl"].startswith(google_search_url)
             continue
@@ -48,15 +40,15 @@ def main() -> None:
 
             if page["header"] != "Chrome":
                 assert re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)
-                assert page["header"] == re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1] or
-                re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1].endswith(page["header"])
+                assert page["header"] == re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1] or \
+                    re.match(r"[\w-]+://([^:/]+)[:/$]", page["titleUrl"],)[1].endswith(page["header"])
                 # {'www3.', 'www.', 'www2.', 'www33.', 'web.'}
         else:
             assert page["header"] != "Chrome"
 
         assert page["products"] == ["Chrome"]
         if page["titleUrl"].split(":", 1)[0] in ["http", "https"]:
-            infos.append(
+            history.append(
                 {
                     "title": page["title"].rsplit(" ", 1)[0],
                     "url": page["titleUrl"],
@@ -80,8 +72,20 @@ def main() -> None:
                 "chrome-search",
                 "file",
             ]
-    print(f"infos: {len(infos)}")
-    print(f"history: {len(history)}")
+
+    print(f"{len(history)}[{len(history) / len(raw_data):.1%}]のデータが読み込まれました")
+    return history
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--takeout-root", type=str, default="Takeout")
+    args = parser.parse_args()
+    print(json.dumps(args.__dict__))  # , indent=2
+
+    history_file = Path(args.takeout_root) / "マイ アクティビティ" / "Chrome" / "マイアクティビティ.json"
+
+    history = load_data(history_file)
 
 
 if __name__ == "__main__":

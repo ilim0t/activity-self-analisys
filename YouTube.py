@@ -1,23 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 import json
-from datetime import datetime
 from pathlib import Path
-from time import sleep
-from typing import List
+from typing import Any, Dict, List
 
 from tqdm import tqdm
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--takeout-root", type=str, default="Takeout")
-    args = parser.parse_args()
-    print(json.dumps(args.__dict__))  # , indent=2
-
-    history_file = Path(args.takeout_root) / "YouTube" / "履歴" / "watch-history.json"
-    with open(history_file) as f:
-        history: List[dict] = json.load(f)
+def load_data(file_path: Path) -> List[Dict[str, Any]]:
+    with open(file_path) as f:
+        raw_data: List[dict] = json.load(f)
     # 1年間
     # {
     #     "header": "YouTube",
@@ -27,10 +19,10 @@ def main() -> None:
     #     "title": "【アクエリアス】 TVCM 『見えない...F を視聴しました",
     #     "titleUrl": "https://www.youtube...w1ji5_CXI",
     # }
-    infos = []
-    untitles = []  # 単にtitleがないのと削除済みのが混じっている
+    history = []
+    non_public = []  # 非公開動画
 
-    for page in tqdm(history):
+    for page in tqdm(raw_data):
         if "titleUrl" not in page:
             if page["title"].rsplit(" ", 1)[-1] == "のストーリーを視聴しました":
                 pass
@@ -43,16 +35,16 @@ def main() -> None:
             continue
         if "subtitles" not in page:
             assert page["title"] == f"{page['titleUrl']} を視聴しました"
-            untitles.append({"time": page["time"], "title_url": page["titleUrl"]})
+            non_public.append({"time": page["time"], "title_url": page["titleUrl"]})
             continue
 
         assert page["header"] in ["YouTube", "YouTube Music"]
         assert page["products"] == ["YouTube"]
         assert len(page["subtitles"]) == 1
 
-        infos.append(
+        history.append(
             {
-                "title": page["title"],
+                "title": page["title"][:-8],
                 "title_url": page["titleUrl"],
                 "time": page["time"],
                 "channel": page["subtitles"][0]["name"],
@@ -60,8 +52,19 @@ def main() -> None:
             }
         )
 
-    print(f"infos: {len(infos)}")
-    print(f"history: {len(history)}")
+    print(f"{len(history)}[{len(history) / len(raw_data):.1%}]のデータが読み込まれました")
+    return history
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--takeout-root", type=str, default="Takeout")
+    args = parser.parse_args()
+    print(json.dumps(args.__dict__))  # , indent=2
+
+    history_file = Path(args.takeout_root) / "YouTube" / "履歴" / "watch-history.json"
+
+    history = load_data(history_file)
 
 
 if __name__ == "__main__":
