@@ -1,6 +1,6 @@
 # activity-self-analisys
 
-[Google データ エクスポート](https://support.google.com/accounts/answer/3024190?hl=ja)でダウンロードしたデートを分析する
+[Google データ エクスポート](https://support.google.com/accounts/answer/3024190?hl=ja)でダウンロードしたデータを分析する
 
 # Requirements
 
